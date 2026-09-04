@@ -1,0 +1,10 @@
+{
+  "name": "medlens-mock-langchain",
+  "version": "1.0.0",
+  "description": "Mock LangChain Q&A service for MedLens — stand-in for the partner's API (see docs/LANGCHAIN_API_CONTRACT.md)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT"
+}

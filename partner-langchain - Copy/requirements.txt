@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+pydantic
+httpx
+langchain-text-splitters
+langchain-community
+sentence-transformers

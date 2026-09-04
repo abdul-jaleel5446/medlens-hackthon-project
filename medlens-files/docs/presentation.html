@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedLens — Hackathon Presentation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #0a0a0f;
+    color: #fff;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .deck { position: relative; width: 100vw; height: 100vh; }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 80px;
+    opacity: 0;
+    transform: translateX(40px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  /* Backgrounds */
+  .slide-1 { background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 50%, #415a77 100%); }
+  .slide-2 { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
+  .slide-3 { background: linear-gradient(135deg, #0d1b2a 0%, #1b4332 50%, #2d6a4f 100%); }
+  .slide-4 { background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 50%, #5b21b6 100%); }
+  .slide-5 { background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #1e3a5f 100%); }
+  .slide-6 { background: linear-gradient(135deg, #0d1b2a 0%, #1b3a4b 50%, #065a82 100%); }
+  .slide-7 { background: linear-gradient(135deg, #1a1a2e 0%, #3d1c56 50%, #6b21a8 100%); }
+  .slide-8 { background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 50%, #415a77 100%); }
+
+  .slide-number {
+    position: absolute;
+    bottom: 30px;
+    right: 40px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.3);
+    font-weight: 300;
+  }
+
+  .tag {
+    display: inline-block;
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-size: 56px;
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #fff 0%, #93c5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  h2 {
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 24px;
+  }
+
+  .subtitle {
+    font-size: 22px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.7);
+    max-width: 700px;
+    line-height: 1.5;
+  }
+
+  .big-quote {
+    font-size: 28px;
+    font-style: italic;
+    color: rgba(255,255,255,0.5);
+    border-left: 3px solid #3b82f6;
+    padding-left: 20px;
+    margin-top: 30px;
+    max-width: 600px;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 40px;
+    margin: 30px 0;
+  }
+
+  .stat-box {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 24px 32px;
+    min-width: 180px;
+  }
+  .stat-box .num {
+    font-size: 36px;
+    font-weight: 900;
+    color: #60a5fa;
+  }
+  .stat-box .label {
+    font-size: 14px;
+    color: rgba(255,255,255,0.6);
+    margin-top: 4px;
+  }
+
+  ul {
+    list-style: none;
+    margin: 10px 0;
+  }
+  ul li {
+    font-size: 18px;
+    line-height: 1.8;
+    padding-left: 28px;
+    position: relative;
+    color: rgba(255,255,255,0.85);
+  }
+  ul li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: #3b82f6;
+    font-weight: 700;
+  }
+
+  .check-list li {
+    padding-left: 32px;
+  }
+  .check-list li::before {
+    content: '✓';
+    color: #10b981;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+  }
+
+  .card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #60a5fa;
+    margin-bottom: 10px;
+  }
+  .card p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.6;
+  }
+
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+  }
+  .compare-box {
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .compare-box.before {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+  .compare-box.after {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+  .compare-box h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .compare-box.before h3 { color: #f87171; }
+  .compare-box.after h3 { color: #34d399; }
+  .compare-box p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.7;
+  }
+
+  .arch-diagram {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 20px 0;
+    max-width: 650px;
+  }
+  .arch-box {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 20px 28px;
+  }
+  .arch-box .arch-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #60a5fa;
+    margin-bottom: 6px;
+  }
+  .arch-box .arch-desc {
+    font-size: 14px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.5;
+  }
+  .arch-arrow {
+    text-align: center;
+    font-size: 24px;
+    color: rgba(255,255,255,0.3);
+  }
+
+  .tech-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .tech-tag {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #93c5fd;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .step-flow {
+    display: flex;
+    gap: 20px;
+    margin: 20px 0;
+  }
+  .step {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 22px;
+    text-align: center;
+  }
+  .step .step-num {
+    font-size: 28px;
+    font-weight: 900;
+    color: #3b82f6;
+    margin-bottom: 8px;
+  }
+  .step .step-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 6px;
+  }
+  .step .step-desc {
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .final-title {
+    font-size: 64px;
+    font-weight: 900;
+    text-align: center;
+    background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 20px;
+  }
+  .final-tagline {
+    text-align: center;
+    font-size: 22px;
+    color: rgba(255,255,255,0.6);
+    font-weight: 300;
+    font-style: italic;
+  }
+
+  .nav-hint {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    color: rgba(255,255,255,0.2);
+    z-index: 100;
+  }
+
+  .progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    transition: width 0.5s ease;
+    z-index: 100;
+  }
+
+  .audience-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .audience-tag {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #6ee7b7;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .roadmap-list {
+    margin-top: 10px;
+  }
+  .roadmap-list li {
+    font-size: 18px;
+    line-height: 2.2;
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progress"></div>
+<div class="deck" id="deck">
+
+  <!-- Slide 1: Title -->
+  <div class="slide slide-1 active" data-slide="1">
+    <div class="tag">Hackathon 2026</div>
+    <h1 style="font-size: 72px;">MedLens</h1>
+    <div class="subtitle" style="font-size: 26px; margin-bottom: 40px;">
+      Making Medical Documents<br>Understandable for Everyone
+    </div>
+    <div style="display: flex; gap: 40px; margin-top: 20px;">
+      <div>
+        <div style="font-size: 13px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px;">Team</div>
+        <div style="font-size: 18px; margin-top: 4px;">[Your Name] & [Partner's Name]</div>
+      </div>
+    </div>
+    <div class="slide-number">1 / 8</div>
+  </div>
+
+  <!-- Slide 2: The Problem -->
+  <div class="slide slide-2" data-slide="2">
+    <div class="tag">The Problem</div>
+    <h2>Medical documents are written<br>for doctors — not patients.</h2>
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="num">50%</div>
+        <div class="label">of adults struggle with<br>medical documents</div>
+      </div>
+      <div class="stat-box">
+        <div class="num">100K+</div>
+        <div class="label">deaths/year from<br>medication errors</div>
+      </div>
+      <div class="stat-box">
+        <div class="num">0</div>
+        <div class="label">tools that explain<br>your lab report</div>
+      </div>
+    </div>
+    <div class="big-quote">
+      "I got my lab report but I have no idea if my results are good or bad."
+    </div>
+    <div class="slide-number">2 / 8</div>
+  </div>
+
+  <!-- Slide 3: Our Solution -->
+  <div class="slide slide-3" data-slide="3">
+    <div class="tag">Our Solution</div>
+    <h2>Upload. Understand. Ask.</h2>
+    <div class="step-flow">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-label">Upload</div>
+        <div class="step-desc">Photo or PDF of any medical document</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-label">Read & Classify</div>
+        <div class="step-desc">AI extracts text, identifies document type</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-label">Summarize</div>
+        <div class="step-desc">Plain-language explanation generated</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-label">Ask Questions</div>
+        <div class="step-desc">Conversational Q&A about YOUR document</div>
+      </div>
+    </div>
+    <div class="subtitle" style="margin-top: 20px;">Safety gate automatically flags high-risk documents (pediatric doses, blood thinners, pregnancy) for human review.</div>
+    <div style="margin-top: 24px;">
+      <div style="font-size: 13px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Who it serves</div>
+      <div class="audience-list">
+        <div class="audience-tag">Patients</div>
+        <div class="audience-tag">Elderly</div>
+        <div class="audience-tag">Parents</div>
+        <div class="audience-tag">Rural communities</div>
+        <div class="audience-tag">Non-native speakers</div>
+      </div>
+    </div>
+    <div class="slide-number">3 / 8</div>
+  </div>
+
+  <!-- Slide 4: Need & Impact -->
+  <div class="slide slide-4" data-slide="4">
+    <div class="tag">Need & Impact</div>
+    <h2>Why this matters now</h2>
+    <div class="comparison">
+      <div class="compare-box before">
+        <h3>Without MedLens</h3>
+        <p>"My glucose is 112 mg/dL... is that bad?"</p>
+        <p style="margin-top: 10px;">Patient Googles symptoms, panics</p>
+        <p style="margin-top: 10px;">Dangerous self-medication decisions</p>
+        <p style="margin-top: 10px;">No follow-up without another visit</p>
+      </div>
+      <div class="compare-box after">
+        <h3>With MedLens</h3>
+        <p>"Your fasting glucose is 112 mg/dL, slightly above the normal range of 70-99. Discuss with your doctor."</p>
+        <p style="margin-top: 10px;">Calm, document-grounded explanations</p>
+        <p style="margin-top: 10px;">Safety gate catches high-risk docs</p>
+        <p style="margin-top: 10px;">Conversational Q&A anytime</p>
+      </div>
+    </div>
+    <div style="margin-top: 30px; font-size: 16px; color: rgba(255,255,255,0.5);">
+      The global digital health market is projected to reach <strong style="color: #a78bfa;">$660 billion by 2027</strong>
+    </div>
+    <div class="slide-number">4 / 8</div>
+  </div>
+
+  <!-- Slide 5: Innovation & Technology -->
+  <div class="slide slide-5" data-slide="5">
+    <div class="tag">Innovation & Technology</div>
+    <h2>One intelligent pipeline</h2>
+    <div class="grid-2">
+      <div>
+        <div class="arch-diagram">
+          <div class="arch-box">
+            <div class="arch-title">Document Processing (n8n)</div>
+            <div class="arch-desc">Upload → OCR → Classify → Summarize → Safety Check → Store</div>
+          </div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-box">
+            <div class="arch-title">Conversational Q&A (n8n + Ollama)</div>
+            <div class="arch-desc">Retrieve document → Build prompt → LLM generates grounded answer</div>
+          </div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-box">
+            <div class="arch-title">Web Frontend</div>
+            <div class="arch-desc">Upload UI → Summary display → Chat interface</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">What makes it innovative</div>
+        <ul>
+          <li>Multi-modal input (PDFs + photos)</li>
+          <li>Smart document classification</li>
+          <li>AI safety gate for high-risk docs</li>
+          <li>Document-grounded answers (no hallucination)</li>
+          <li>100% local AI — patient data never leaves</li>
+          <li>Zero external API dependencies</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-number">5 / 8</div>
+  </div>
+
+  <!-- Slide 6: What We Built -->
+  <div class="slide slide-6" data-slide="6">
+    <div class="tag">Feasibility</div>
+    <h2>This is not a concept — it's live.</h2>
+    <div class="grid-2">
+      <div>
+        <div style="font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">What's working right now</div>
+        <ul class="check-list">
+          <li>Document upload (PDF + image)</li>
+          <li>AI classification (3 document types)</li>
+          <li>Patient-friendly summarization</li>
+          <li>Safety gate with risk flagging</li>
+          <li>Conversational Q&A — real answers</li>
+          <li>Web frontend (drag-drop + chat)</li>
+          <li>Local document storage (Data Tables)</li>
+          <li>100% local AI — zero external APIs</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">Tech stack</div>
+        <div class="tech-tags">
+          <div class="tech-tag">n8n</div>
+          <div class="tech-tag">Ollama</div>
+          <div class="tech-tag">Llama 3.2</div>
+          <div class="tech-tag">Gemini OCR</div>
+          <div class="tech-tag">Node.js</div>
+          <div class="tech-tag">n8n Data Tables</div>
+        </div>
+        <div style="margin-top: 30px; padding: 20px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px;">
+          <div style="font-size: 14px; font-weight: 700; color: #34d399; margin-bottom: 8px;">DEMO READY</div>
+          <div style="font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.6;">
+            Upload a real prescription → get a plain-language summary → ask follow-up questions → get specific, grounded answers
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-number">6 / 8</div>
+  </div>
+
+  <!-- Slide 7: What's Next -->
+  <div class="slide slide-7" data-slide="7">
+    <div class="tag">What's Next</div>
+    <h2>The road ahead</h2>
+    <ul class="roadmap-list">
+      <li><strong>Mobile app</strong> — snap a photo of your prescription at the pharmacy</li>
+      <li><strong>Multi-language support</strong> — serve non-English speaking patients</li>
+      <li><strong>Pharmacist integration</strong> — connect to pharmacy systems for verification</li>
+      <li><strong>Hospital deployment</strong> — integrate with EHR for discharge summaries</li>
+      <li><strong>Regulatory compliance</strong> — HIPAA / GDPR certification for clinical use</li>
+    </ul>
+    <div class="slide-number">7 / 8</div>
+  </div>
+
+  <!-- Slide 8: Thank You -->
+  <div class="slide slide-8" data-slide="8">
+    <div class="final-title">MedLens</div>
+    <div class="final-tagline">Because every patient deserves to understand their own health.</div>
+    <div style="text-align: center; margin-top: 60px; font-size: 20px; color: rgba(255,255,255,0.4);">
+      Questions?
+    </div>
+    <div class="slide-number">8 / 8</div>
+  </div>
+
+</div>
+
+<div class="nav-hint">← → arrow keys or click to navigate</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  function show(n) {
+    if (n < 0 || n >= total) return;
+    slides[current].classList.remove('active');
+    current = n;
+    slides[current].classList.add('active');
+    document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); show(current + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); show(current - 1); }
+    if (e.key === 'Home') { e.preventDefault(); show(0); }
+    if (e.key === 'End') { e.preventDefault(); show(total - 1); }
+  });
+
+  document.addEventListener('click', e => {
+    if (e.clientX > window.innerWidth / 2) show(current + 1);
+    else show(current - 1);
+  });
+
+  // Touch support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', e => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) show(current + 1);
+      else show(current - 1);
+    }
+  });
+
+  show(0);
+</script>
+</body>
+</html>

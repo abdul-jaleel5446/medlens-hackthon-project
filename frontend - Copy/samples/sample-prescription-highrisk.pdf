@@ -1,0 +1,46 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 458 >>
+stream
+BT
+/F1 11 Tf
+14 TL
+50 760 Td
+(PRESCRIPTION - Mercy Clinic) Tj T*
+(Patient: Jane Smith   DOB: 11/02/1961) Tj T*
+(Date: 08/25/2026   Dr: A. Rivera, MD) Tj T*
+() Tj T*
+(Warfarin 5 mg tablet - take 3 tablets daily \(15 mg total\).) Tj T*
+(Note: Previous dose was 5 mg daily. DOSE TRIPLED.) Tj T*
+(Patient also reports unexplained bruising and blood in stool.) Tj T*
+(INR not checked in 6 months. History of GI bleeding 2024.) Tj T*
+() Tj T*
+(Refills: 2) Tj T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000750 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+820
+%%EOF

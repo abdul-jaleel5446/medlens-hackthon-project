@@ -1,0 +1,30 @@
+# n8n internal data
+.n8n-data/
+
+# IDE / editor
+.aicoding-chat-workspace*
+.vscode/
+.idea/
+
+# Temp files
+.tmp-*.json
+debug-exec.js
+patch-ops.js
+push-to-n8n.js
+test-image-upload.js
+
+# Duplicate/backup folders
+*- Copy*/
+*- Copy/
+medlens-files/
+
+# Node modules
+node_modules/
+
+# Environment files with secrets
+.env
+.env.local
+
+# OS files
+Thumbs.db
+.DS_Store

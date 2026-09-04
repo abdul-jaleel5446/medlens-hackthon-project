@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedLens — Medical Document Explainer</title>
+<style>
+  :root {
+    --primary: #1a73e8;
+    --primary-dark: #1557b0;
+    --success: #0d9488;
+    --danger: #dc2626;
+    --warning: #f59e0b;
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --text: #1e293b;
+    --text-light: #64748b;
+    --border: #e2e8f0;
+    --shadow: 0 4px 24px rgba(0,0,0,0.08);
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, var(--primary) 0%, #0d47a1 100%);
+    color: white;
+    padding: 28px 32px;
+    text-align: center;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+  }
+  header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  header h1 span { opacity: 0.7; font-weight: 400; }
+  header p { margin-top: 6px; opacity: 0.85; font-size: 15px; }
+
+  /* ── Container ── */
+  .container { max-width: 780px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 28px;
+    background: var(--card); border-radius: var(--radius);
+    padding: 4px; box-shadow: var(--shadow);
+  }
+  .tab {
+    flex: 1; padding: 12px 16px; border: none; background: transparent;
+    font-size: 15px; font-weight: 600; color: var(--text-light);
+    cursor: pointer; border-radius: 10px; transition: all 0.2s;
+  }
+  .tab:hover { background: var(--bg); }
+  .tab.active { background: var(--primary); color: white; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    padding: 32px; box-shadow: var(--shadow); margin-bottom: 24px;
+  }
+  .card h2 { font-size: 20px; margin-bottom: 4px; }
+  .card .subtitle { color: var(--text-light); font-size: 14px; margin-bottom: 24px; }
+
+  /* ── Drop Zone ── */
+  .dropzone {
+    border: 2.5px dashed var(--border);
+    border-radius: 12px; padding: 48px 24px; text-align: center;
+    cursor: pointer; transition: all 0.25s; position: relative;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: var(--primary); background: #e8f0fe;
+  }
+  .dropzone .icon { font-size: 48px; margin-bottom: 12px; }
+  .dropzone p { color: var(--text-light); font-size: 15px; }
+  .dropzone .formats { font-size: 12px; margin-top: 8px; color: #94a3b8; }
+  .dropzone input { display: none; }
+  .file-preview {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; background: #f1f5f9; border-radius: 10px;
+    margin-top: 16px; font-size: 14px;
+  }
+  .file-preview .fname { font-weight: 600; flex: 1; word-break: break-all; }
+  .file-preview .fsize { color: var(--text-light); }
+  .file-preview .remove {
+    background: none; border: none; color: var(--danger);
+    font-size: 18px; cursor: pointer; padding: 4px 8px;
+  }
+
+  /* ── Form ── */
+  .form-row { margin-top: 20px; }
+  .form-row label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .form-row input {
+    width: 100%; padding: 12px 14px; border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 15px; outline: none; transition: border 0.2s;
+  }
+  .form-row input:focus { border-color: var(--primary); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 32px; border: none; border-radius: 10px;
+    font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    width: 100%; margin-top: 20px;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ── Loading ── */
+  .loading { text-align: center; padding: 48px 20px; display: none; }
+  .spinner {
+    width: 48px; height: 48px; border: 4px solid var(--border);
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { color: var(--text-light); font-size: 15px; }
+  .loading .sub { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+
+  /* ── Result ── */
+  .result { display: none; }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .badge-delivered { background: #dcfce7; color: #166534; }
+  .badge-review { background: #fef3c7; color: #92400e; }
+  .badge-error { background: #fee2e2; color: #991b1b; }
+
+  .meta-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+  }
+  .meta-item {
+    padding: 12px 14px; background: #f8fafc; border-radius: 10px;
+  }
+  .meta-item .label { font-size: 11px; text-transform: uppercase; color: var(--text-light); font-weight: 700; letter-spacing: 0.5px; }
+  .meta-item .value { font-size: 15px; font-weight: 600; margin-top: 2px; }
+
+  .summary-box {
+    background: #f8fafc; border-left: 4px solid var(--primary);
+    border-radius: 0 10px 10px 0; padding: 20px 24px;
+    line-height: 1.7; font-size: 15px; white-space: pre-wrap;
+  }
+  .disclaimer {
+    margin-top: 16px; padding: 12px 16px; background: #fffbeb;
+    border-radius: 8px; font-size: 13px; color: #92400e;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+
+  /* ── Q&A ── */
+  .chat-messages {
+    max-height: 400px; overflow-y: auto; padding: 8px 0;
+    margin-bottom: 16px;
+  }
+  .chat-msg {
+    display: flex; gap: 10px; margin-bottom: 16px;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .chat-msg .avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .chat-msg.user .avatar { background: #e0e7ff; }
+  .chat-msg.bot .avatar { background: #d1fae5; }
+  .chat-msg .bubble {
+    padding: 12px 16px; border-radius: 12px; font-size: 14px;
+    line-height: 1.6; max-width: 85%;
+  }
+  .chat-msg.user .bubble { background: var(--primary); color: white; }
+  .chat-msg.bot .bubble { background: #f1f5f9; }
+  .chat-msg.bot .bubble .sources {
+    margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0;
+    font-size: 12px; color: var(--text-light);
+  }
+
+  .chat-input-row { display: flex; gap: 8px; }
+  .chat-input-row input {
+    flex: 1; padding: 12px 14px; border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 14px; outline: none;
+  }
+  .chat-input-row input:focus { border-color: var(--primary); }
+  .chat-input-row button {
+    padding: 12px 20px; background: var(--primary); color: white;
+    border: none; border-radius: 10px; font-weight: 700; cursor: pointer;
+    font-size: 14px; white-space: nowrap;
+  }
+  .chat-input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .doc-ref {
+    padding: 12px 16px; background: #f0fdf4; border-radius: 10px;
+    margin-bottom: 16px; font-size: 13px; color: #166534;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .doc-ref strong { font-weight: 700; }
+
+  .hidden { display: none !important; }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .container { padding: 16px 12px 60px; }
+    .card { padding: 20px; }
+    .dropzone { padding: 32px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>MedLens <span>| Patient Portal</span></h1>
+  <p>Upload your medical document &mdash; get a plain-language explanation</p>
+</header>
+
+<div class="container">
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('upload')">Upload Document</button>
+    <button class="tab" onclick="switchTab('qa')">Ask Questions</button>
+  </div>
+
+  <!-- ═══ UPLOAD TAB ═══ -->
+  <div id="tab-upload">
+
+    <div class="card" id="upload-card">
+      <h2>Upload a Medical Document</h2>
+      <p class="subtitle">PDF reports, prescription photos, or scanned records</p>
+
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">&#128196;</div>
+        <p><strong>Click to upload</strong> or drag &amp; drop your file here</p>
+        <p class="formats">Supports: PDF, JPG, PNG, WEBP &mdash; max 20 MB</p>
+        <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp">
+      </div>
+
+      <div class="file-preview hidden" id="filePreview">
+        <span>&#128196;</span>
+        <span class="fname" id="fileName"></span>
+        <span class="fsize" id="fileSize"></span>
+        <button class="remove" onclick="clearFile()" title="Remove">&times;</button>
+      </div>
+
+      <div class="form-row">
+        <label for="patientId">Patient ID</label>
+        <input type="text" id="patientId" placeholder="e.g. P-1001" value="P-1001">
+      </div>
+
+      <button class="btn btn-primary" id="uploadBtn" onclick="doUpload()" disabled>
+        Analyze Document
+      </button>
+    </div>
+
+    <!-- Loading state -->
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>Analyzing your document&hellip;</p>
+      <p class="sub">Extracting text &rarr; Classifying &rarr; Summarizing &rarr; Safety check</p>
+      <p class="sub" style="margin-top:8px">This takes 1&ndash;4 minutes (AI processing)</p>
+    </div>
+
+    <!-- Result -->
+    <div class="result" id="result">
+      <div class="card">
+        <div id="statusBadge"></div>
+
+        <div class="meta-grid" id="metaGrid"></div>
+
+        <h3 style="font-size:16px; margin-bottom:10px;">Plain-Language Summary</h3>
+        <div class="summary-box" id="summaryBox"></div>
+
+        <div class="disclaimer" id="disclaimerBox">
+          <span>&#9888;&#65039;</span>
+          <span id="disclaimerText"></span>
+        </div>
+
+        <button class="btn btn-primary" onclick="resetUpload()" style="margin-top:24px;">
+          Upload Another Document
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ Q&A TAB ═══ -->
+  <div id="tab-qa" class="hidden">
+
+    <div class="card">
+      <h2>Ask About Your Document</h2>
+      <p class="subtitle">Chat with your uploaded medical report</p>
+
+      <div class="doc-ref hidden" id="docRef">
+        <span>&#128203;</span>
+        <span>Document: <strong id="docRefId"></strong></span>
+      </div>
+
+      <div class="form-row" id="docIdRow">
+        <label for="qaDocId">Document ID <span style="font-weight:400;color:var(--text-light)">(from your upload result)</span></label>
+        <input type="text" id="qaDocId" placeholder="paste document ID here">
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-msg bot">
+          <div class="avatar">&#129302;</div>
+          <div class="bubble">
+            Hi! Paste a Document ID above and ask me anything about your medical report.
+            I'll find the relevant parts and explain them in simple terms.
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="e.g. What was my glucose level?" disabled
+               onkeydown="if(event.key==='Enter') sendQuestion()">
+        <button onclick="sendQuestion()" id="sendBtn" disabled>Send</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  // ── State ──
+  let selectedFile = null;
+  let lastDocId = null;
+  let lastPatientId = null;
+  let conversationId = null;
+
+  // ── Tab Switching ──
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', (name === 'upload' && i === 0) || (name === 'qa' && i === 1));
+    });
+    document.getElementById('tab-upload').classList.toggle('hidden', name !== 'upload');
+    document.getElementById('tab-qa').classList.toggle('hidden', name !== 'qa');
+  }
+
+  // ── File Handling ──
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault(); dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => { if (fileInput.files.length) setFile(fileInput.files[0]); });
+
+  function setFile(f) {
+    selectedFile = f;
+    document.getElementById('fileName').textContent = f.name;
+    document.getElementById('fileSize').textContent = formatSize(f.size);
+    document.getElementById('filePreview').classList.remove('hidden');
+    document.getElementById('uploadBtn').disabled = false;
+  }
+  function clearFile() {
+    selectedFile = null; fileInput.value = '';
+    document.getElementById('filePreview').classList.add('hidden');
+    document.getElementById('uploadBtn').disabled = true;
+  }
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  // ── Upload ──
+  async function doUpload() {
+    if (!selectedFile) return;
+    const patientId = document.getElementById('patientId').value.trim() || 'anonymous';
+
+    // Show loading
+    document.getElementById('upload-card').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('result').style.display = 'none';
+
+    const form = new FormData();
+    form.append('data', selectedFile);
+    form.append('patientId', patientId);
+
+    // 10-minute timeout (n8n pipelines take 1-4 min with local LLM)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 600000);
+
+    try {
+      const started = Date.now();
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: form,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const secs = ((Date.now() - started) / 1000).toFixed(1);
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error('HTTP ' + res.status + ': ' + (text.slice(0, 200) || res.statusText));
+      }
+      const data = await res.json();
+      showResult(data, secs);
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        showError('Request timed out after 10 minutes. Is n8n still processing?');
+      } else {
+        showError(err.message);
+      }
+    }
+  }
+
+  function showResult(data, secs) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('result').style.display = 'block';
+
+    // Status badge
+    const badge = document.getElementById('statusBadge');
+    if (data.ok === false) {
+      badge.innerHTML = '<span class="status-badge badge-error">&#10060; Processing Error</span>';
+    } else if (data.status === 'pending_review') {
+      badge.innerHTML = '<span class="status-badge badge-review">&#128308; Held for Clinician Review</span>';
+    } else {
+      badge.innerHTML = '<span class="status-badge badge-delivered">&#9989; Delivered to Patient (' + secs + 's)</span>';
+    }
+
+    // Meta grid
+    const grid = document.getElementById('metaGrid');
+    grid.innerHTML = '';
+    const items = [
+      { label: 'Document ID', value: data.documentId || '—' },
+      { label: 'Patient', value: data.patientId || '—' },
+      { label: 'Type', value: data.classification || '—' },
+      { label: 'Risk Level', value: data.riskLevel || '—' },
+    ];
+    items.forEach(it => {
+      grid.innerHTML += `<div class="meta-item"><div class="label">${it.label}</div><div class="value">${it.value}</div></div>`;
+    });
+
+    // Summary
+    document.getElementById('summaryBox').textContent = data.summary || '(no summary returned)';
+    document.getElementById('disclaimerText').textContent =
+      data.disclaimer || 'This is an AI-generated explanation, not medical advice. Always consult your healthcare provider.';
+
+    // Save for Q&A
+    lastDocId = data.documentId;
+    lastPatientId = data.patientId;
+    if (lastDocId) {
+      document.getElementById('docRefId').textContent = lastDocId;
+      document.getElementById('docRef').classList.remove('hidden');
+      document.getElementById('qaDocId').value = lastDocId;
+      document.getElementById('chatInput').disabled = false;
+      document.getElementById('sendBtn').disabled = false;
+    }
+  }
+
+  function showError(msg) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('result').style.display = 'block';
+    document.getElementById('statusBadge').innerHTML =
+      '<span class="status-badge badge-error">&#10060; ' + msg + '</span>';
+    document.getElementById('metaGrid').innerHTML = '';
+    document.getElementById('summaryBox').textContent = 'Could not process this document. Is n8n running on port 5678?';
+    document.getElementById('disclaimerBox').classList.add('hidden');
+  }
+
+  function resetUpload() {
+    document.getElementById('upload-card').style.display = 'block';
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('disclaimerBox').classList.remove('hidden');
+    clearFile();
+  }
+
+  // ── Q&A ──
+  document.getElementById('qaDocId').addEventListener('input', function() {
+    const hasId = this.value.trim().length > 0;
+    document.getElementById('chatInput').disabled = !hasId;
+    document.getElementById('sendBtn').disabled = !hasId;
+    document.getElementById('docIdRow').style.display = hasId ? 'none' : 'block';
+    if (hasId) {
+      document.getElementById('docRefId').textContent = this.value.trim();
+      document.getElementById('docRef').classList.remove('hidden');
+    }
+  });
+
+  async function sendQuestion() {
+    const input = document.getElementById('chatInput');
+    const question = input.value.trim();
+    const docId = document.getElementById('qaDocId').value.trim() || lastDocId;
+    if (!question || !docId) return;
+
+    const patientId = lastPatientId || document.getElementById('patientId').value.trim() || 'anonymous';
+    input.value = ''; input.disabled = true;
+    document.getElementById('sendBtn').disabled = true;
+
+    // User bubble
+    addChatMsg('user', question);
+
+    // Typing indicator
+    const typingEl = addChatMsg('bot', '<em>Thinking...</em>');
+
+    try {
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question, documentId: docId, patientId, conversationId
+        })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (data.conversation_id) conversationId = data.conversation_id;
+
+      typingEl.remove();
+
+      let text = data.answer || '(no answer returned)';
+      if (data.sources && data.sources.length) {
+        text += '<div class="sources"><strong>Sources:</strong> ' + data.sources.join(' &middot; ') + '</div>';
+      }
+      addChatMsg('bot', text);
+    } catch (err) {
+      typingEl.remove();
+      addChatMsg('bot', '<span style="color:var(--danger)">Error: ' + err.message + '. Is the LangChain service running?</span>');
+    }
+
+    input.disabled = false;
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+  }
+
+  function addChatMsg(who, html) {
+    const wrap = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + who;
+    div.innerHTML = `
+      <div class="avatar">${who === 'user' ? '&#128100;' : '&#129302;'}</div>
+      <div class="bubble">${html}</div>
+    `;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+    return div;
+  }
+</script>
+
+</body>
+</html>

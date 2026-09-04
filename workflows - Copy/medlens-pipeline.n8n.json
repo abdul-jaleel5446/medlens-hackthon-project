@@ -1,0 +1,572 @@
+{
+  "id": "medlens-pipeline",
+  "name": "MedLens Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 📄 MedLens Pipeline (n8n)\\n\\nUpload → Extract → Classify → Summarize → **Safety Gate** → Deliver\\n\\n1. Patient uploads document (multipart form, file field = `data`)\\n2. Extract text from PDF\\n3. Classify: prescription / lab_report / medical_record / other\\n4. LLM plain-language summary (with red-flag detection)\\n5. Safety checkpoint: high-risk content → held for clinician review\\n6. Deliver summary to patient",
+        "height": 420,
+        "width": 2400
+      },
+      "id": "sticky-pipeline",
+      "name": "Sticky Note — Pipeline",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        -620
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 💬 Patient Q&A → Partner's LangChain API\\n\\nWhenever the patient asks a follow-up question, this flow forwards `question + documentId` to the LangChain service (`LANGCHAIN_API_URL`) and returns the answer with sources.",
+        "height": 300,
+        "width": 820
+      },
+      "id": "sticky-qa",
+      "name": "Sticky Note — Q&A",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "medlens/upload",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "n-upload-webhook",
+      "name": "Upload Document",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -580,
+        -260
+      ],
+      "webhookId": "medlens-upload-doc"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "data",
+        "dataPropertyName": "text",
+        "options": {
+          "standardFontDataUrl": "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/"
+        }
+      },
+      "id": "n-extract-pdf",
+      "name": "Extract Text (PDF)",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -360,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge all extracted pages into one document text and carry upload metadata forward\\nconst pages = $input.all().map(item => item.json.text).filter(Boolean);\\nconst docText = pages.join('\\n\\n').slice(0, 30000);\\nconst body = $('Upload Document').first().json.body ?? {};\\n\\nreturn [{\\n  json: {\\n    documentId: body.documentId ?? `doc_${Date.now()}`,\\n    patientId: body.patientId ?? 'anonymous',\\n    docText,\\n    uploadedAt: new Date().toISOString(),\\n  },\\n}];"
+      },
+      "id": "n-combine",
+      "name": "Combine & Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -140,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LANGCHAIN_API_URL }}/documents",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "document_id",
+              "value": "={{ $json.documentId }}"
+            },
+            {
+              "name": "patient_id",
+              "value": "={{ $json.patientId }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.docText }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n-register-doc",
+      "name": "Register Document (LangChain)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        80,
+        -260
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4o-mini"
+            },
+            {
+              "name": "temperature",
+              "value": 0
+            },
+            {
+              "name": "response_format",
+              "value": "={\"type\":\"json_object\"}"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([ { role: 'system', content: 'You classify medical documents into exactly one category: prescription, lab_report, medical_record, or other. Reply with JSON only, e.g. {\"doc_type\": \"prescription\", \"confidence\": 0.95}' }, { role: 'user', content: 'Classify this document:\\n\\n' + $('Combine & Prepare').first().json.docText.slice(0, 6000) } ]) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n-classify",
+      "name": "Classify Document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the classifier response; fail safe to 'other' if malformed\\nconst raw = $json.choices?.[0]?.message?.content ?? '{}';\\nlet parsed;\\ntry { parsed = JSON.parse(raw); } catch { parsed = {}; }\\n\\nconst allowed = ['prescription', 'lab_report', 'medical_record', 'other'];\\nconst docType = allowed.includes(parsed.doc_type) ? parsed.doc_type : 'other';\\nconst prep = $('Combine & Prepare').first().json;\\n\\nreturn [{\\n  json: {\\n    ...prep,\\n    docType,\\n    confidence: parsed.confidence ?? 0,\\n  },\\n}];"
+      },
+      "id": "n-parse-class",
+      "name": "Parse Classification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4o-mini"
+            },
+            {
+              "name": "temperature",
+              "value": 0.2
+            },
+            {
+              "name": "response_format",
+              "value": "={\"type\":\"json_object\"}"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([ { role: 'system', content: 'You are a patient-friendly medical document explainer. Write at a 6th-grade reading level. NEVER invent or infer medical facts that are not present in the document. Output JSON only: {\"summary\": string with 3-5 plain-language sentences, \"key_findings\": array of short strings, \"red_flags\": array of short strings (empty array if none), \"risk_level\": \"low\" or \"medium\" or \"high\" (high if abnormal/critical values, serious new diagnoses, dosage changes, or anything that may need urgent attention)}' }, { role: 'user', content: 'Document type: ' + $json.docType + '\\n\\nDocument text:\\n' + $json.docText.slice(0, 12000) } ]) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n-summarize",
+      "name": "Summarize (Plain Language)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        740,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse summary JSON. FAIL SAFE: if the LLM output can't be parsed,\\n// treat it as high-risk so it goes to human review instead of the patient.\\nconst raw = $json.choices?.[0]?.message?.content ?? '{}';\\nlet s;\\ntry { s = JSON.parse(raw); } catch { s = {}; }\\n\\nconst meta = $('Parse Classification').first().json;\\nconst risk = ['low', 'medium', 'high'].includes(s.risk_level) ? s.risk_level : 'high';\\n\\nreturn [{\\n  json: {\\n    documentId: meta.documentId,\\n    patientId: meta.patientId,\\n    docType: meta.docType,\\n    summary: s.summary ?? 'Unable to generate a safe summary. Routed for human review.',\\n    keyFindings: Array.isArray(s.key_findings) ? s.key_findings : [],\\n    redFlags: Array.isArray(s.red_flags) ? s.red_flags : [],\\n    riskLevel: risk,\\n    disclaimer: 'This is an AI-generated explanation, not medical advice. Always consult your doctor.',\\n  },\\n}];"
+      },
+      "id": "n-parse-summary",
+      "name": "Parse Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "risk-check",
+              "leftValue": "={{ $json.riskLevel }}",
+              "rightValue": "high",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n-risk-gate",
+      "name": "High Risk?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1180,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.REVIEW_WEBHOOK_URL }}",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "event",
+              "value": "high_risk_summary_review"
+            },
+            {
+              "name": "documentId",
+              "value": "={{ $json.documentId }}"
+            },
+            {
+              "name": "patientId",
+              "value": "={{ $json.patientId }}"
+            },
+            {
+              "name": "docType",
+              "value": "={{ $json.docType }}"
+            },
+            {
+              "name": "redFlags",
+              "value": "={{ $json.redFlags }}"
+            },
+            {
+              "name": "summary",
+              "value": "={{ $json.summary }}"
+            },
+            {
+              "name": "requestedAt",
+              "value": "={{ new Date().toISOString() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n-alert-review",
+      "name": "Alert Review Queue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1420,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'pending_review', message: 'This summary contains high-risk information and is held for clinician review before being shown to the patient.', documentId: $('Parse Summary').first().json.documentId, riskLevel: 'high', redFlags: $('Parse Summary').first().json.redFlags }) }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "n-respond-pending",
+      "name": "Respond Pending Review",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1640,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'ready', documentId: $json.documentId, patientId: $json.patientId, docType: $json.docType, summary: $json.summary, keyFindings: $json.keyFindings, redFlags: $json.redFlags, riskLevel: $json.riskLevel, disclaimer: $json.disclaimer }) }}",
+        "options": {}
+      },
+      "id": "n-deliver",
+      "name": "Deliver Summary",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1420,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "medlens/ask",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "n-ask-webhook",
+      "name": "Ask Question",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -580,
+        40
+      ],
+      "webhookId": "medlens-ask-question"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LANGCHAIN_API_URL }}/ask",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "question",
+              "value": "={{ $json.body.question }}"
+            },
+            {
+              "name": "document_id",
+              "value": "={{ $json.body.documentId ?? $json.body.document_id }}"
+            },
+            {
+              "name": "patient_id",
+              "value": "={{ $json.body.patientId ?? $json.body.patient_id }}"
+            },
+            {
+              "name": "conversation_id",
+              "value": "={{ $json.body.conversationId ?? null }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n-call-langchain",
+      "name": "Call LangChain Q&A API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -360,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ answer: $json.answer ?? 'No answer returned.', sources: $json.sources ?? [], conversationId: $json.conversation_id ?? null }) }}",
+        "options": {}
+      },
+      "id": "n-respond-answer",
+      "name": "Respond Answer",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -140,
+        40
+      ]
+    }
+  ],
+  "connections": {
+    "Upload Document": {
+      "main": [
+        [
+          {
+            "node": "Extract Text (PDF)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text (PDF)": {
+      "main": [
+        [
+          {
+            "node": "Combine & Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine & Prepare": {
+      "main": [
+        [
+          {
+            "node": "Register Document (LangChain)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register Document (LangChain)": {
+      "main": [
+        [
+          {
+            "node": "Classify Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Document": {
+      "main": [
+        [
+          {
+            "node": "Parse Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Classification": {
+      "main": [
+        [
+          {
+            "node": "Summarize (Plain Language)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize (Plain Language)": {
+      "main": [
+        [
+          {
+            "node": "Parse Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Summary": {
+      "main": [
+        [
+          {
+            "node": "High Risk?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "High Risk?": {
+      "main": [
+        [
+          {
+            "node": "Alert Review Queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Deliver Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Review Queue": {
+      "main": [
+        [
+          {
+            "node": "Respond Pending Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Question": {
+      "main": [
+        [
+          {
+            "node": "Call LangChain Q&A API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call LangChain Q&A API": {
+      "main": [
+        [
+          {
+            "node": "Respond Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
