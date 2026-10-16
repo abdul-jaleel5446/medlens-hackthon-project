@@ -248,6 +248,14 @@
       <div class="form-row">
         <label for="patientId">Patient ID</label>
         <input type="text" id="patientId" placeholder="e.g. P-1001" value="P-1001">
+      </div> 
+      <div class="form-row">
+        <label for="lang">Language</label>
+        <select id="lang" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;">
+          <option value="English">English</option>
+          <option value="Urdu">اردو (Urdu)</option>
+          <option value="Pashto">پښتو (Pashto)</option>
+        </select>
       </div>
 
       <button class="btn btn-primary" id="uploadBtn" onclick="doUpload()" disabled>
